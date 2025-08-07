@@ -26,32 +26,6 @@ def show_intro():
     print("-----------------------------------------------------------")
 
 show_intro()
-
-
-def show_main_menu():
-    print("\n--- Main Menu ----")
-    print("(N)ew game")
-    print("(L)oad saved game")
-    print("(Q)uit")
-    print("------------------")
-
-# Run intro when the program starts
-show_intro()
-
-# Set the game state (controls which menu we're in)
-game_state = 'main'
-
-def show_town_menu(player):
-    print(f"\nDAY {player['day']}")
-    print("----- Sundrop Town -----")
-    print("(B)uy stuff")
-    print("See Player (I)nformation")
-    print("See Mine (M)ap")
-    print("(E)nter mine")
-    print("Sa(V)e game")
-    print("(Q)uit to main menu")
-    print("------------------------") 
-
 def initialize_fog(height, width):
     return [['?' for _ in range(width)] for _ in range(height)]
 
@@ -63,34 +37,6 @@ def clear_fog(fog, player, width, height):
             ny = y + dy
             if 0 <= ny < height and 0 <= nx < width:
                 fog[ny][nx] = ''
-
-def print_map(full=False):
-    global game_map, fog, player, width, height
-
-    if full:
-        start_x, end_x = 0, width
-        start_y, end_y = 0, height
-    else:
-        vision = 1
-        start_x = max(0, player['x'] - vision)
-        end_x = min(width, player['x'] + vision + 1)
-        start_y = max(0, player['y'] - vision)
-        end_y = min(height, player['y'] + vision + 1)
-
-    print("+" + "-" * ((end_x - start_x) * 2 - 1) + "+")
-    for y in range(start_y, end_y):
-        row = "|"
-        for x in range(start_x, end_x):
-            if player['x'] == x and player['y'] == y:
-                row += "M"
-            elif fog[y][x] == '?':
-                row += "?"
-            else:
-                row += game_map[y][x]
-            row += ""
-        print(row.rstrip() + "|")
-    print("+" + "-" * ((end_x - start_x) * 2 - 1) + "+")
-
 def initialize_game(): 
     global game_map, fog, player, width, height
     game_map = []
@@ -121,28 +67,145 @@ def initialize_game():
                 player['y'] = y
                 break
     clear_fog(fog, player, width, height)
+initialize_game()    
+
+# initialize_game()
+
+def show_main_menu():
+    while True:
+        print("\n--- Main Menu ----")
+        print("(N)ew game")
+        print("(L)oad saved game")
+        print("(Q)uit")
+        print("------------------")
+        choice = input("Your choice? ").lower()
+        if choice == 'n':
+                name = input("Greetings, miner! What is your name? ")
+                print(f"Pleased to meet you, {name}. Welcome to Sundrop Town!")
+                show_town_menu()
+                player['name'] = name
+                game_state == 'town' 
+            
+        elif choice == 'l':
+            if load_game():
+                    show_town_menu()
+
+        elif choice == 'q':
+            print("Thanks for playing!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+            continue
+
+# Run intro when the program starts
+# show_intro()
+
+# Set the game state (controls which menu we're in)
+game_state = 'main'
+
+def show_town_menu():
+    while True:
+        print(f"\nDAY {player['day']}")
+        print("----- Sundrop Town -----")
+        print("(B)uy stuff")
+        print("See Player (I)nformation")
+        print("See Mine (M)ap")
+        print("(E)nter mine")
+        print("Sa(V)e game")
+        print("(Q)uit to main menu")
+        print("------------------------") 
+        choice = input("Your choice? ").lower()
+        if choice == 'i':
+            print("----- Player Information -----")
+            print(f"Name: {player['name']}")
+            print(f"GP: {player['GP']}")
+                    #print(f"portal position: ( ({player['x']}, {player['y']})")
+                    #print(f"Pickaxe level: 1 (copper)")
+            print("-" * 30)
+            total_load = player['copper'] + player['silver'] + player['gold']
+            print(f"Load: {total_load} / {player['backpack']}")
+            print("-" * 30)
+            print(f"GP: {player['GP']}")
+            print(f"Steps taken: {player['steps']}")
+            print("-" * 30)
+            # input("Press Enter to return to the menu...")``
+            show_town_menu()
+        elif choice == 'm':
+                    # Check that the map has been initialized
+            if 'x' not in player or game_map == []:
+                print("Map not initialized yet.")
+            else:
+                print_map(full=True)
+                show_town_menu()
+        elif choice == 'e':
+            enter_mine()
+        elif choice == 'b':
+            show_shop_menu()
+        elif choice == 'v':
+            save_game()
+        elif choice == 'q':
+            show_main_menu()
+        else:
+            print("Invalid choice. Please try again.")
+            continue
     
+
+
+def print_map(full=False):
+    global game_map, fog, player, width, height
+
+    if full:
+        start_x, end_x = 0, width
+        start_y, end_y = 0, height
+    else:
+        vision = 1
+        start_x = max(0, player['x'] - vision)
+        end_x = min(width, player['x'] + vision + 1)
+        start_y = max(0, player['y'] - vision)
+        end_y = min(height, player['y'] + vision + 1)
+
+    print("+" + "-" * ((end_x - start_x) * 2) + "+")
+    for y in range(start_y, end_y):
+        row = "|"
+        for x in range(start_x, end_x):
+            if player['x'] == x and player['y'] == y:
+                row += "M "
+            elif fog[y][x] == '?':
+                row += "? "
+            else:
+                row += game_map[y][x] + " "
+        row += "|"
+        print(row)
+    print("+" + "-" * ((end_x - start_x) * 2) + "+")
+
+
 
 def enter_mine():
     global game_map, fog, player, width, height
 
     def print_local_viewport():
         print(f"\nDAY {player['day']}")
-        print("+" + "-" * 5 + "+")  # 3 cells = 5 dashes including spaces
+        print("+------+")  # 3 tiles * 2 chars each
+
         for dy in range(-1, 2):
             row = "|"
             for dx in range(-1, 2):
                 nx = player['x'] + dx
                 ny = player['y'] + dy
+
                 if 0 <= nx < width and 0 <= ny < height:
                     if nx == player['x'] and ny == player['y']:
-                        row += "M"
+                        row += "M "  # Player
                     else:
-                        row += f"{game_map[ny][nx]}"
+                        row += game_map[ny][nx] + " "  # Surrounding tiles
                 else:
-                    row += "#"  # outside bounds
-            print(row + "|")
-        print("+" + "-" * 5 + "+")
+                    row += "# "  # Out-of-bounds
+            row += "|"
+            print(row)
+
+        print("+------+")  # Bottom border
+
+
 
     while True:
         print_local_viewport()
@@ -167,9 +230,48 @@ def enter_mine():
             continue
         elif action == 'p':
             print("You used the portal to return to town.")
-            show_shop_menu()
+
+            # 1. Remove 'M' and drop 'P' instead
+            game_map[player['y']][player['x']] = 'P'  # overwrite M with P
+
+            # 2. Move player to town portal (T)
+            found_town_portal = False
+            for y in range(height):
+                for x in range(width):
+                    if game_map[y][x] == 'T':
+                        player['x'] = x
+                        player['y'] = y
+                        found_town_portal = True
+                        break
+                if found_town_portal:
+                    break
+
+            if not found_town_portal:
+                print("ERROR: No town portal (T) found on the map!")
+                continue
+
+            # 3. Sell minerals and do end-of-day
+            for mineral in ['copper', 'silver', 'gold']:
+                amount = player[mineral]
+                if amount > 0:
+                    min_price, max_price = prices[mineral]
+                    total_gp = 0
+                    for _ in range(amount):
+                        total_gp += randint(min_price, max_price)
+                    print(f"Sold {amount} {mineral} for {total_gp} GP.")
+                    player['GP'] += total_gp
+                    player[mineral] = 0
+                else:
+                    print(f"You have no {mineral} to sell.")
+            print(f"You now have {player['GP']} GP!")
+
             player['day'] += 1
+            player['turns'] = TURNS_PER_DAY
+            player['steps'] = 0
+
+            show_town_menu()
             break
+
         elif action == 'q':
             print("Returning to main menu...")
             break
@@ -202,16 +304,29 @@ def enter_mine():
                 clear_fog(fog, player, width, height)
 
                  # --- Check for automatic teleport back to town ---
-                if player['turns'] <= 0:
-                    print("You are exhausted.")
-                    print("You place your portal stone here and zap back to town.")
-                    show_shop_menu()
-                    player['day'] += 1
-                    player['turns'] = TURNS_PER_DAY
-                    break
 
                 tile = game_map[new_y][new_x]
                 if tile in minerals_names:
+                    if player['turns'] <= 0:
+                        print("You are exhausted.")
+                        print("You place your portal stone here and zap back to town.")
+                        for mineral in ['copper', 'silver', 'gold']:
+                            amount = player[mineral]
+                            if amount > 0:
+                                min_price, max_price = prices[mineral]
+                                total_gp = 0
+                                for _ in range(amount):
+                                    total_gp += randint(min_price, max_price)
+                                print(f"Sold {amount} {mineral} for {total_gp} GP.")
+                                player['GP'] += total_gp
+                                player[mineral] = 0
+                            else:
+                                print(f"You have no {mineral} to sell.")
+                        print(f"You now have {player['GP']} GP!")
+                        player['day'] += 1
+                        player['turns'] = TURNS_PER_DAY
+                        show_town_menu()
+                        break
                     mineral = minerals_names[tile]
                     allowed = {
                     1: ['copper'],
@@ -222,6 +337,7 @@ def enter_mine():
                         continue
 
                     total_load = player['copper'] + player['silver'] + player['gold']
+                
                     if total_load < 10:
                         # Define mining range per mineral
                         mining_ranges = {
@@ -236,7 +352,7 @@ def enter_mine():
 
                         if mined_amount > 0:
                             player[mineral] += mined_amount
-                            game_map[new_y][new_x] = '.'  # replace with dirt
+                            game_map[new_y][new_x] = ' '  # replace with dirt
                             print(f"You mined {mined_amount} {mineral}!")
                             print(f"Current load: {current_load + mined_amount}/10")
                         else:
@@ -247,12 +363,30 @@ def enter_mine():
                             print("Your backpack is full. Returning to town to unload...")
                             print("You can't carry any more, so you can't go that way.")
                             print("You place your portal stone here and zap back to town.")
-                            show_shop_menu()
+                            for mineral in ['copper', 'silver', 'gold']:
+                                amount = player[mineral]
+                                if amount > 0:
+                                    min_price, max_price = prices[mineral]
+                                    total_gp = 0
+                                    for _ in range(amount):
+                                        total_gp += randint(min_price, max_price)
+                                    print(f"Sold {amount} {mineral} for {total_gp} GP.")
+                                    player['GP'] += total_gp
+                                    player[mineral] = 0
+                                    if player["GP"] >= WIN_GP:
+                                        print("Congratulations! You've earned enough GP to retire!")
+                                        print(f"You finished in {player['day']} days with {player['steps']}steps.")
+                                        # record_top_score()
+                                        show_main_menu()
+                                        break
+                                else:
+                                    print(f"You have no {mineral} to sell.")
+                            print(f"You now have {player['GP']} GP!")
                             player['day'] += 1
                             player['turns'] = TURNS_PER_DAY
+                            show_town_menu()
                             break
-
-
+                   
 def show_shop_menu():
     global player
     # Sell minerals first
@@ -274,18 +408,13 @@ def show_shop_menu():
     # Now show the shop upgrade menu
     while True:
         print("\n--------------------- Shop Menu ---------------------")
+        print(f"(B)ackpack upgrade to carry {player['backpack'] + 2} items for {player['backpack'] * 2} GP")
         if player['pickaxe'] == 1:
             print("(P)ickaxe upgrade to Level 2 to mine silver ore for 50 GP")
         elif player['pickaxe'] == 2:
             print("(P)ickaxe upgrade to Level 3 to mine gold ore for 150 GP")
         else:
             print("Pickaxe is already max level.")
-
-        if player['backpack'] == 10:
-            print("(B)ackpack upgrade to carry 12 items for 20 GP")
-        else:
-            print("Backpack is already upgraded.")
-
         print("(L)eave shop")
         print("-----------------------------------------------------")
         print(f"GP: {player['GP']}")
@@ -302,15 +431,18 @@ def show_shop_menu():
                 print("Congratulations! You can now mine gold!")
             else:
                 print("Not enough GP or already max level.")
-        elif choice == 'b':
-            if player['backpack'] == 10 and player['GP'] >= 20:
-                player['backpack'] = 12
-                player['GP'] -= 20
-                print("Backpack upgraded! You can now carry 12 items.")
+        elif choice == 'b' and player['GP'] >= 20:
+            if choice == 'b' and player['GP'] >= 20:
+                upgraded_cost = player['backpack'] * 2
+                player['backpack'] += 2
+                player['GP'] -= upgraded_cost
+            # if player['backpack'] == 10 and player['GP'] >= player['backpack']*2:
+            
             else:
                 print("Not enough GP or backpack already upgraded.")
         elif choice == 'l':
-            break
+            show_town_menu()
+            # break
         else:
             print("Invalid choice. Please try again.")
 
@@ -331,73 +463,49 @@ def load_game():
     try:
         with open("saved_game.json", "r") as f:
             game_data = json.load(f)
-        game_map = game_data["game_map"]
-        fog = game_data["fog"]
-        player = game_data["player"]
-        width = game_data["width"]
-        height = game_data["height"]
-        print("Game loaded successfully.")
-        return True
+            game_map = game_data["game_map"]
+            fog = game_data["fog"]
+            player = game_data["player"]
+            width = game_data["width"]
+            height = game_data["height"]
+            print("Game loaded successfully.")
+            return True
     except FileNotFoundError:
         print("No saved game found.")
         return False
+
+def record_top_score():
+    score_entry = {"name" : player["name"],
+                "days" : player["day"],
+                "steps" : player["steps"],
+                "GP" : player["GP"]} 
+    try: 
+        with open("top_scores.json", "r") as f:
+            scores = json.load(f)
+    except FileNotFoundError:
+        scores = []
+
+    scores.append(score_entry)
+    scores.sort(key=lambda x: (x["days"], x["steps"], -x["GP"]))
+    scores = scores[:5]
+
+    with open("top_scores.json", "w") as f:
+        json.dump(scores, f)
+
+def view_top_scores():
+    print("\n--- Top 5 Scores ---")
+    try:
+        with open("top_scores.json", "r") as f:
+            scores = json.load(f)
+            for i, s in enumerate(scores, 1):
+                print(f"{i}. {s['name']} - Days: {s['days']} | Steps: {s['steps']} | GP: {s['GP']}")
+    except FileNotFoundError:
+        print("No top scores yet!")
 
 # Main game loop
 while True:
     if game_state == 'main':
         show_main_menu()
-        choice = input("Your choice? ").lower()
-
-        if choice == 'n':
-            name = input("Greetings, miner! What is your name? ")
-            print(f"Pleased to meet you, {name}. Welcome to Sundrop Town!")
-            initialize_game()
-            player['name'] = name
-            game_state = 'town' 
-        
-        elif choice == 'l':
-            if load_game():
-                game_state = 'town'
-
-        elif choice == 'q':
-            print("Thanks for playing!")
-            break
-        else:
-            print("Invalid choice. Please try again.")
-
-    elif game_state == 'town':
-            show_town_menu(player)
-            choice = input("Your choice? ").lower()
-
-            if choice == 'i':
-                print("----- Player Information -----")
-                print(f"Name: {player['name']}")
-                print(f"GP: {player['GP']}")
-                #print(f"portal position: ( ({player['x']}, {player['y']})")
-                #print(f"Pickaxe level: 1 (copper)")
-                print("-" * 30)
-                total_load = player['copper'] + player['silver'] + player['gold']
-                print(f"Load: {total_load} / 10")
-                print("-" * 30)
-                print(f"GP: {player['GP']}")
-                print(f"Steps taken: {player['steps']}")
-                print("-" * 30)
-                input("Press Enter to return to the menu...")
-            elif choice == 'm':
-                # Check that the map has been initialized
-                if 'x' not in player or game_map == []:
-                    print("Map not initialized yet.")
-                else:
-                    print_map(full=True)
-            elif choice == 'e':
-                enter_mine()
-            elif choice == 'b':
-                show_shop_menu()
-            elif choice == 'v':
-                save_game()
-            else:
-                print("Invalid choice. Please try again.")
-
             
 
 
