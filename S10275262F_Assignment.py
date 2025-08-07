@@ -87,7 +87,7 @@ def print_map(full=False):
                 row += "?"
             else:
                 row += game_map[y][x]
-            row += " "
+            row += ""
         print(row.rstrip() + "|")
     print("+" + "-" * ((end_x - start_x) * 2 - 1) + "+")
 
@@ -136,12 +136,11 @@ def enter_mine():
                 ny = player['y'] + dy
                 if 0 <= nx < width and 0 <= ny < height:
                     if nx == player['x'] and ny == player['y']:
-                        row += "M "
+                        row += "M"
                     else:
-                        row += f"{game_map[ny][nx]} "
+                        row += f"{game_map[ny][nx]}"
                 else:
-                    row += "  "  # outside bounds
-            row = row.rstrip()
+                    row += "#"  # outside bounds
             print(row + "|")
         print("+" + "-" * 5 + "+")
 
