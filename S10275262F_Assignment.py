@@ -10,6 +10,7 @@ MAP_WIDTH = 0
 MAP_HEIGHT = 0
 TURNS_PER_DAY = 20
 WIN_GP = 500
+TORCH_PRICE = 50   
 
 minerals = ['copper','silver','gold']
 minerals_names = {"C" : "copper",'S' : 'silver' , 'G' : 'gold'}
@@ -29,14 +30,20 @@ show_intro()
 def initialize_fog(height, width):
     return [['?' for _ in range(width)] for _ in range(height)]
 
+def vision_radius():
+    # 1 = normal 3x3, 2 = torch 5x5
+    return 2 if player.get('torch') else 1
+
 def clear_fog(fog, player, width, height):
+    v = vision_radius()
     x, y = player['x'], player['y']
-    for dy in range(-1, 2):
-        for dx in range(-1, 2):
+    for dy in range(-v, v + 1):
+        for dx in range(-v, v + 1):
             nx = x + dx
             ny = y + dy
             if 0 <= ny < height and 0 <= nx < width:
                 fog[ny][nx] = ''
+
 
 def initialize_game(): 
     global game_map, fog, player, width, height
@@ -60,7 +67,8 @@ def initialize_game():
         'steps': 0,
         'turns': TURNS_PER_DAY,
         'pickaxe': 1,
-        'backpack': 10}
+        'backpack': 10,
+        'torch': False,}
     found_M = False
     for y in range(height):
         for x in range(width):
@@ -181,7 +189,7 @@ def print_map(full=False):
         start_x, end_x = 0, width
         start_y, end_y = 0, height
     else:
-        v = 1
+        v = vision_radius()
         start_x = max(0, player['x'] - v)
         end_x   = min(width, player['x'] + v + 1)
         start_y = max(0, player['y'] - v)
@@ -280,30 +288,27 @@ def enter_mine():
 
 
     def print_local_viewport():
+        v = vision_radius()
+        span = (2 * v) + 1
         print(f"\nDAY {player['day']}")
-        print("+---+")  # 3 columns → 3 dashes
-        for dy in (-1, 0, 1):
+        print("+" + "-" * span + "+")
+        for dy in range(-v, v + 1):
             row_chars = []
-            for dx in (-1, 0, 1):
+            for dx in range(-v, v + 1):
                 nx = player['x'] + dx
                 ny = player['y'] + dy
                 if 0 <= nx < width and 0 <= ny < height:
-                    if nx == player['x'] and ny == player['y']:
-                        ch = 'M'
-                    else:
-                        ch = game_map[ny][nx]
+                    ch = 'M' if (nx == player['x'] and ny == player['y']) else game_map[ny][nx]
                 else:
-                    ch = '#'  # out-of-bounds
+                    ch = '#'
                 row_chars.append(ch)
             print("|" + "".join(row_chars) + "|")
-        print("+---+")
-
+        print("+" + "-" * span + "+")
     # Which ores each pickaxe level can mine
     allowed = {
         1: ['copper'],
         2: ['copper', 'silver'],
-        3: ['copper', 'silver', 'gold']
-    }
+        3: ['copper', 'silver', 'gold']}
 
     while True:
         print_local_viewport()
@@ -458,6 +463,7 @@ def show_shop_menu():
             print("(P)ickaxe upgrade to Level 3 to mine gold ore for 150 GP")
         else:
             print("Pickaxe is already max level.")
+        print(f"(T)orch for brighter light radius for {TORCH_PRICE} GP" + (" (owned)" if player.get('torch') else ""))
         print("(L)eave shop")
         print("-----------------------------------------------------")
         print(f"GP: {player['GP']}")
@@ -483,6 +489,15 @@ def show_shop_menu():
             
             else:
                 print("Not enough GP or backpack already upgraded.")
+        elif choice == 't':
+            if player.get('torch'):
+                print("You already own a torch.")
+            elif player['GP'] >= TORCH_PRICE:
+                player['GP'] -= TORCH_PRICE
+                player['torch'] = True
+                print("You bought a torch! Your vision radius is bigger now.")
+            else:
+                print("Not enough GP for the torch.")
         elif choice == 'l':
             return
         else:
@@ -511,6 +526,9 @@ def load_game():
             width = game_data["width"]
             height = game_data["height"]
 
+            if 'torch' not in player: 
+                player['torch'] = False
+                
             # --- Part 5: safety for portal & spawn ---
             # Ensure spawn_mine exists
             if 'spawn_mine_x' not in player or 'spawn_mine_y' not in player:
