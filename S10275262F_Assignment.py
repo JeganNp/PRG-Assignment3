@@ -1,10 +1,27 @@
+''' Name : M Jegan
+    Class : CICTP01
+    StudentID : S10275262F
+    Date : 10 August 2025
+    Assignment : Sundrop Caves 
+
+    Description:
+    This program is a text-based mining and exploration game where the player must
+    earn at least 500 GP to win. The player explores a mine, collects minerals, sells them,
+    and can purchase upgrades (backpack, pickaxe, torch). The game includes saving/loading,
+    a fog-of-war map system, portals, and a top score leaderboard.'''
+
+''' - Reads the cave layout from Level1.txt
+    - Saves/loads game state from saved_game.json
+    - Stores top scores in top_scores.json
+    '''
+
 from random import randint 
 import json 
 
 #Game data
-player  = {}
-game_map = []
-fog = []   
+player  = {}   # All player state is stored in this dictionary
+game_map = []  # Reads the Level1.txt
+fog = []       # for the "?" and empty spaces after you mine finish
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
@@ -13,9 +30,9 @@ WIN_GP = 500
 TORCH_PRICE = 50   
 
 minerals = ['copper','silver','gold']
-minerals_names = {"C" : "copper",'S' : 'silver' , 'G' : 'gold'}
-prices = {'copper' : (1,3), 'silver' : (5,8), 'gold' : (10,18)}
-pickaxe_price = [50, 150]
+minerals_names = {"C" : "copper",'S' : 'silver' , 'G' : 'gold'}   # map tile -> mineral name
+prices = {'copper' : (1,3), 'silver' : (5,8), 'gold' : (10,18)}   # This will make sure the amount of ore that you get is random.
+pickaxe_price = [50, 150] # to upgrade pickaxe 
 
 
 def show_intro():
@@ -27,14 +44,14 @@ def show_intro():
     print("-----------------------------------------------------------")
 
 show_intro()
-def initialize_fog(height, width):
+def initialize_fog(height, width):  # Create a fog-of-war filled with '?'
     return [['?' for _ in range(width)] for _ in range(height)]
 
-def vision_radius():
+def vision_radius():                # Compute current vision radius 
     # 1 = normal 3x3, 2 = torch 5x5
     return 2 if player.get('torch') else 1
 
-def clear_fog(fog, player, width, height):
+def clear_fog(fog, player, width, height):  # shows the space around the players position
     v = vision_radius()
     x, y = player['x'], player['y']
     for dy in range(-v, v + 1):
@@ -45,8 +62,9 @@ def clear_fog(fog, player, width, height):
                 fog[ny][nx] = ''
 
 
-def initialize_game(): 
+def initialize_game():       # Loads the map from Level1.txt, create fog, and initialize the player dict.
     global game_map, fog, player, width, height
+    # Load map as 2d List
     game_map = []
     with open("Level1.txt", "r") as f:
         for line in f:
@@ -56,6 +74,7 @@ def initialize_game():
 
     fog = initialize_fog(height, width) 
 
+    #player state
     player = {'name': '',
         'x': 0,
         'y': 0,
@@ -64,7 +83,8 @@ def initialize_game():
         'gold': 0,
         'GP': 0,
         'day': 1,
-        'steps': 0,
+        'steps': 0,                 # steps taken today
+        'total_steps' : 0,          # steps across all days (for leaderboard)
         'turns': TURNS_PER_DAY,
         'pickaxe': 1,
         'backpack': 10,
@@ -84,11 +104,13 @@ def initialize_game():
         if found_M:
             break
     clear_fog(fog, player, width, height)
+
 initialize_game()    
 
-# initialize_game()
-
 def show_main_menu():
+    """ Main menu loop: New game, Load game, View Top Scores, Quit.
+    On 'n': starts the game, ask for name, then show town menu.
+    """
     while True:
         print("\n--- Main Menu ----")
         print("(N)ew game")
@@ -115,19 +137,17 @@ def show_main_menu():
 
         elif choice == 'q':
             print("Thanks for playing!")
-            return  # use return so we cleanly exit the menu
+            return  
 
         else:
             print("Invalid choice. Please try again.")
             continue
 
-# Run intro when the program starts
-# show_intro()
-
-# Set the game state (controls which menu we're in)
 game_state = 'main'
 
 def show_town_menu():
+    """ Town hub loop: shop, info, map, enter mine, save, or quit to main menu.
+    """
     while True:
         print(f"\nDAY {player['day']}")
         print("----- Sundrop Town -----")
@@ -148,6 +168,7 @@ def show_town_menu():
             total_load = player['copper'] + player['silver'] + player['gold']
             print(f"Load: {total_load} / {player['backpack']}")
             print(f"Steps taken: {player['steps']}")
+            print(f"Total steps: {player['total_steps']}")
             print("-" * 30)
             input("Press Enter to return...")
             continue
@@ -165,7 +186,7 @@ def show_town_menu():
             continue
 
         elif choice == 'b':
-            show_shop_menu()  # make sure show_shop_menu() returns on 'L'
+            show_shop_menu()  
             continue
 
         elif choice == 'v':
@@ -211,27 +232,28 @@ def print_map(full=False):
     print("+" + "-" * span + "+")
 
 
-
-
 def enter_mine():
     global game_map, fog, player, width, height
-
-    # === Spawn at portal location if it exists (Part 3) ===
+    """
+    Enter the mine. Handles spawn logic, movement, mining, portals,
+    auto-teleport on exhaustion/full backpack, and winning condition.
+    """
+    
     if player.get('portal_x') is not None and player.get('portal_y') is not None:
         px, py = player['portal_x'], player['portal_y']
         if 0 <= px < width and 0 <= py < height and game_map[py][px] == 'P':
             player['x'], player['y'] = px, py
-            game_map[py][px] = ' '  # pick up the stone
+            game_map[py][px] = ' '  
             player['portal_x'] = None
             player['portal_y'] = None
             clear_fog(fog, player, width, height)
     else:
-        # No portal down — spawn at original mine start
+        
         if 'spawn_mine_x' in player and 'spawn_mine_y' in player:
             player['x'], player['y'] = player['spawn_mine_x'], player['spawn_mine_y']
             clear_fog(fog, player, width, height)
 
-    # === Local helper to do the actual teleport/sell/reset ===
+
     def teleport_to_town(reason="manual", place_portal=True):
     # Only drop/record a portal if requested
         if place_portal:
@@ -254,7 +276,7 @@ def enter_mine():
             print("ERROR: No town portal (T) found on the map!")
             return "error"
 
-        # Sell all minerals
+        # Sell all carried ores for randomized prices
         for mineral in ['copper', 'silver', 'gold']:
             amount = player[mineral]
             if amount > 0:
@@ -267,10 +289,11 @@ def enter_mine():
                 print(f"You have no {mineral} to sell.")
         print(f"You now have {player['GP']} GP!")
 
-        # Win check
+        # Check win condition
         if player['GP'] >= WIN_GP:
             print("Congratulations! You've earned enough GP to retire!")
-            print(f"You finished in {player['day']} days with {player['steps']} steps.")
+            print(f"You finished in {player['day']} days with {player['total_steps']} total steps "
+                f"(today: {player['steps']}).")
             try:
                 record_top_score()
                 print("Top score saved!")
@@ -309,7 +332,8 @@ def enter_mine():
         1: ['copper'],
         2: ['copper', 'silver'],
         3: ['copper', 'silver', 'gold']}
-
+    
+    # ----- Mining/Movement loop -----
     while True:
         print_local_viewport()
         total_load = player['copper'] + player['silver'] + player['gold']
@@ -318,9 +342,10 @@ def enter_mine():
         print("(M)ap, (I)nformation, (P)ortal, (Q)uit to main menu")
         action = input("Action? ").lower()
 
+        # Non-movement actions
         if action == 'm':
             print_map(full=True)
-            input("Press Enter to return to mining...")  # optional pause
+            input("Press Enter to return to mining...")  
             continue
         elif action == 'i':
             print("----- Player Information -----")
@@ -357,6 +382,7 @@ def enter_mine():
         new_x = player['x'] + dx
         new_y = player['y'] + dy
 
+        # Keep moves inside the map
         if 0 <= new_x < width and 0 <= new_y < height:
             target = game_map[new_y][new_x]
 
@@ -370,6 +396,7 @@ def enter_mine():
                 player['x'] = new_x
                 player['y'] = new_y
                 player['steps'] += 1
+                player['total_steps'] += 1
                 player['turns'] -= 1
                 clear_fog(fog, player, width, height)
                 teleport_to_town("tunnel", place_portal=False)
@@ -389,10 +416,11 @@ def enter_mine():
                     print(f"Your pickaxe can't mine {mineral} yet. The ore blocks your way.")
                     continue
 
-            # --- Move (only reaches here if passable) ---
+            
             player['x'] = new_x
             player['y'] = new_y
             player['steps'] += 1
+            player['total_steps'] += 1
             player['turns'] -= 1
             clear_fog(fog, player, width, height)
 
@@ -506,6 +534,9 @@ def show_shop_menu():
 
 
 def save_game():
+    """
+    Save the current game state to 'saved_game.json'.
+    """
     global game_map, fog, player, width, height
     game_data = {"player": player,
         "game_map": game_map,
@@ -517,6 +548,12 @@ def save_game():
     print("Game saved successfully.")
 
 def load_game():
+    """
+    Load the game state from 'saved_game.json' if it exists.
+
+    Returns:
+        bool: True if load succeeded, else False.
+    """
     global game_map, fog, player, width, height
     try:
         with open("saved_game.json", "r") as f:
@@ -524,15 +561,15 @@ def load_game():
             game_map = game_data["game_map"]
             fog = game_data["fog"]
             player = game_data["player"]
+            # Prompt for name if missing
             if 'name' not in player or not player['name']:
                 player['name'] = input("Enter your name: ") or "Anonymous"
             width = game_data["width"]
             height = game_data["height"]
-
+            # Ensure new fields exist for older saves
             if 'torch' not in player: 
                 player['torch'] = False
                 
-            # --- Part 5: safety for portal & spawn ---
             # Ensure spawn_mine exists
             if 'spawn_mine_x' not in player or 'spawn_mine_y' not in player:
                 for yy in range(height):
@@ -540,7 +577,10 @@ def load_game():
                         if game_map[yy][xx] == 'M':
                             player['spawn_mine_x'] = xx
                             player['spawn_mine_y'] = yy
+
                             break
+            if 'total_steps' not in player:     
+                player['total_steps'] = 0
 
             # Rebuild portal coords if not stored
             if player.get('portal_x') is None or player.get('portal_y') is None:
@@ -564,9 +604,13 @@ def load_game():
 
 
 def record_top_score():
+    """
+    Append current run to the top scores file and keep only the best five.
+    Ranking: fewest days -> fewest total steps -> highest GP.
+    """
     score_entry = {"name" : player["name"],
                 "days" : player["day"],
-                "steps" : player["steps"],
+                "steps" : player["total_steps"],
                 "GP" : player["GP"]} 
     try: 
         with open("top_scores.json", "r") as f:
@@ -582,6 +626,9 @@ def record_top_score():
         json.dump(scores, f)
 
 def view_top_scores():
+    """
+    Print the top 5 leaderboard from 'top_scores.json' if it exists.
+    """
     print("\n--- Top 5 Scores ---")
     try:
         with open("top_scores.json", "r") as f:
