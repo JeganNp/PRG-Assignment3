@@ -100,9 +100,9 @@ def show_main_menu():
 
         if choice == 'n':
             name = input("Greetings, miner! What is your name? ")
+            initialize_game()
             player['name'] = name or "Anonymous"
             print(f"Pleased to meet you, {player['name']}. Welcome to Sundrop Town!")
-            initialize_game()
             show_town_menu()
 
         elif choice == 'l':
@@ -480,15 +480,16 @@ def show_shop_menu():
                 print("Congratulations! You can now mine gold!")
             else:
                 print("Not enough GP or already max level.")
-        elif choice == 'b' and player['GP'] >= 20:
-            if choice == 'b' and player['GP'] >= 20:
-                upgraded_cost = player['backpack'] * 2
+
+        elif choice == 'b':
+            upgrade_cost = player['backpack'] * 2
+            if player['GP'] >= upgrade_cost:
                 player['backpack'] += 2
-                player['GP'] -= upgraded_cost
-            # if player['backpack'] == 10 and player['GP'] >= player['backpack']*2:
-            
+                player['GP'] -= upgrade_cost
+                print(f"Congratulations! You can now carry {player['backpack']} items!")
             else:
-                print("Not enough GP or backpack already upgraded.")
+                print("Not enough GP for the backpack upgrade.")
+            
         elif choice == 't':
             if player.get('torch'):
                 print("You already own a torch.")
@@ -523,6 +524,8 @@ def load_game():
             game_map = game_data["game_map"]
             fog = game_data["fog"]
             player = game_data["player"]
+            if 'name' not in player or not player['name']:
+                player['name'] = input("Enter your name: ") or "Anonymous"
             width = game_data["width"]
             height = game_data["height"]
 
